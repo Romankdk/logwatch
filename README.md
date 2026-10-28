@@ -88,3 +88,7 @@ python3 samples/make_samples.py   # regenerate the sample logs
   servers that use the same time zone, so events line up.
 - Syslog lines have no year: they are assumed to be from the last 12 months unless you pass `--year`.
 - Windows Event Logs and the macOS unified log are not supported yet.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

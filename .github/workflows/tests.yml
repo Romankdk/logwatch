@@ -10,11 +10,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.9", "3.13"]
+        exclude:
+          # Python 3.9 is end-of-life and no longer offered on new Ubuntu runners;
+          # it is still covered on macOS (whose built-in python3 is 3.9) and Windows.
+          - os: ubuntu-latest
+            python: "3.9"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Run tests

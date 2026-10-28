@@ -14,8 +14,9 @@ from .events import FW_BLOCK, SSH_FAIL, SSH_INVALID, SSH_OK, WEB, Event
 
 # --- timestamps -----------------------------------------------------------
 #
-# Every timestamp becomes a naive datetime in this computer's local time zone. Lines that carry
-# a zone (web logs, ISO syslog) are converted; classic syslog lines are assumed to be local already.
+# Times are kept as the server wrote them (its own clock), whatever computer runs the analysis.
+# Classic syslog lines have no zone at all, so converting only the lines that do have one would
+# shift web events hours away from SSH and firewall events from the same server.
 
 # Classic syslog: "Oct 28 03:14:07 host prog[pid]: message" (no year in the line)
 SYSLOG = re.compile(r"^(?P<mon>[A-Z][a-z]{2})\s+(?P<day>\d{1,2}) (?P<hms>\d\d:\d\d:\d\d) (?P<host>\S+) (?P<rest>.*)$")
@@ -23,8 +24,9 @@ SYSLOG = re.compile(r"^(?P<mon>[A-Z][a-z]{2})\s+(?P<day>\d{1,2}) (?P<hms>\d\d:\d
 ISO = re.compile(r"^(?P<iso>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.\d+)?(?P<tz>Z|[+-]\d\d:?\d\d)? (?P<host>\S+) (?P<rest>.*)$")
 
 
-def to_local(dt: datetime) -> datetime:
-    return dt.astimezone().replace(tzinfo=None) if dt.tzinfo else dt
+def as_written(dt: datetime) -> datetime:
+    """Drop the zone but keep the clock time the server wrote."""
+    return dt.replace(tzinfo=None)
 
 
 class Clock:
@@ -64,7 +66,7 @@ def syslog_time(line: str, clock: Clock) -> Optional[Tuple[datetime, str]]:
         tz = m["tz"] or ""
         tz = "+00:00" if tz == "Z" else (f"{tz[:3]}:{tz[3:]}" if tz and ":" not in tz else tz)
         try:
-            return to_local(datetime.fromisoformat(m["iso"] + tz)), m["rest"]
+            return as_written(datetime.fromisoformat(m["iso"] + tz)), m["rest"]
         except ValueError:
             return None
     m = SYSLOG.match(line)
@@ -147,7 +149,7 @@ def parse_access(line: str, clock: Clock) -> Optional[List[Event]]:
     if not m or not valid_ip(m["ip"]):
         return None
     try:
-        ts = to_local(datetime.strptime(m["ts"], "%d/%b/%Y:%H:%M:%S %z"))
+        ts = as_written(datetime.strptime(m["ts"], "%d/%b/%Y:%H:%M:%S %z"))
     except ValueError:
         return None
     return [Event(ts, WEB, m["ip"], method=m["method"], path=m["path"], status=int(m["status"]),

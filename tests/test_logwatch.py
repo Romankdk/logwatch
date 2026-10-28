@@ -81,11 +81,12 @@ class ParserRobustnessTests(unittest.TestCase):
         (feb29,), _ = parse_lines(["Feb 29 10:00:00 h sshd[1]: Invalid user a from 203.0.113.1 port 1"], year=2025)
         self.assertEqual(feb29.time.year, 2024)
 
-    def test_time_zones_are_converted(self):
+    def test_times_kept_as_the_server_wrote_them(self):
         web = '203.0.113.9 - - [27/Oct/2026:14:00:00 +0200] "GET / HTTP/1.1" 200 1 "-" "x"'
-        iso = "2026-10-27T12:00:00Z host sshd[1]: Invalid user a from 203.0.113.9 port 1"
-        (w, s), _ = parse_lines([web, iso], year=2026)
-        self.assertEqual(w.time, s.time)  # both are 12:00 UTC
+        iso = "2026-10-27T14:00:05Z host sshd[1]: Invalid user a from 203.0.113.9 port 1"
+        plain = "Oct 27 14:00:10 host sshd[1]: Invalid user b from 203.0.113.9 port 1"
+        (w, i, p), _ = parse_lines([web, iso, plain], year=2026)
+        self.assertEqual([e.time.strftime("%H:%M:%S") for e in (w, i, p)], ["14:00:00", "14:00:05", "14:00:10"])
 
     def test_folder_skips_binaries_and_duplicates(self):
         from logwatch.__main__ import collect
@@ -186,6 +187,11 @@ class EndToEndTests(unittest.TestCase):
         ])
         # Normal visitors, the admin and the honest typo are never flagged.
         self.assertFalse([a for a in alerts if a["ip"].startswith("192.168.1.")])
+        # Alert times match the evidence lines, whatever time zone this computer is in.
+        first = {a["rule"]: a["first"] for a in alerts}
+        self.assertEqual(first["web-scanner"], "2026-10-27 02:00:00")
+        self.assertEqual(first["web-attack"], "2026-10-27 14:20:00")
+        self.assertEqual(first["port-scan"], "2026-10-27 01:58:00")
 
     def test_gzip_and_clean_logs(self):
         with tempfile.TemporaryDirectory() as d:

@@ -1,5 +1,7 @@
 # logwatch
 
+[![tests](https://github.com/Romankdk/logwatch/actions/workflows/tests.yml/badge.svg)](https://github.com/Romankdk/logwatch/actions/workflows/tests.yml)
+
 A log-based intrusion detector written in pure Python (standard library only, Python 3.9+).
 
 It reads SSH, web server and firewall logs, and turns thousands of lines into a short list of
@@ -15,6 +17,9 @@ git clone https://github.com/Romankdk/logwatch.git
 cd logwatch
 python3 -m logwatch samples/
 ```
+
+Needs [Python 3.9+](https://www.python.org/downloads/) and nothing else. No git? Use
+**Code → Download ZIP** instead of `git clone`. On Windows, type `python` instead of `python3`.
 
 The `samples/` folder contains a fake day of logs from a small web server with several attacks
 hidden among normal traffic. All addresses are from ranges reserved for documentation.
